@@ -1,0 +1,64 @@
+banner:
+  title: "小林良昇(ykoba)"
+
+about:
+  enable: true
+  content: "システムエンジニア / CTO / テックリード"
+  button:
+    btnText: ">> About More"
+    URL: "/about"
+
+social:
+  github: "koba1108"
+  facebook: "yoshinobu.kobayashi.142"
+  gmail: "paseli.koba@gmail.com"
+
+skill:
+  enable: true
+  item:
+    - title: "Golang"
+      description: "Gin, Echo で高性能API開発。gRPCでマイクロサービス構築。同時接続数万ユーザー規模の動画配信バックエンド経験あり。"
+      logo: "https://go.dev/blog/go-brand/Go-Logo/SVG/Go-Logo_Blue.svg"
+
+    - title: "JavaScript / TypeScript"
+      description: "Vue.js, React, Angular でSPA開発。Nuxt.js でのSSR実装。TypeScriptを利用した大規模Webアプリの設計・開発経験あり。"
+      logo: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Typescript_logo_2020.svg"
+
+    - title: "Database"
+      description: "MySQL, PostgreSQL での大規模DBの設計・最適化。DynamoDB, Firestore などのNoSQLを併用したイベント駆動型の設計、実装。複雑なクエリのパフォーマンスチューニング経験豊富。"
+      logo: "https://cdn-icons-png.flaticon.com/512/4248/4248443.png"
+
+    - title: "Infrastructure"
+      description: "AWS, GCP でのクラウドインフラ設計・構築。CI/CD パイプラインを構築し、デプロイメントを自動化し、開発効率を最適化させます。"
+      logo: "https://cdn-icons-png.flaticon.com/512/8637/8637099.png"
+
+    - title: "DevOps & CI/CD"
+      description: "Git, GitHub Actions, Jenkins でCI/CD構築。Docker, Kubernetes によるコンテナ化と自動デプロイ。Terraform でのIaC実践。"
+      logo: "https://cdn-icons-png.flaticon.com/512/2620/2620971.png"
+
+    - title: "Integration"
+      description: "Auth0, Stripe, Sentry, OpenAI など多数の外部APIとの連携経験。セキュアで効率的なサービス統合を実現します。"
+      logo: "https://cdn-icons-png.flaticon.com/512/3305/3305943.png"
+
+experience:
+  enable: true
+  item:
+    - logo: "https://cdn-icons-png.flaticon.com/512/2150/2150463.png"
+      title: "ライブ配信プラットフォーム"
+      company: "CTO"
+      duration: "AWS, golang, Nuxt.js, firestore, dynamodb, opensearch"
+
+    - logo: "https://cdn-icons-png.flaticon.com/512/3884/3884906.png"
+      title: "婚活マッチングサービス"
+      company: "CTO"
+      duration: "GCP, golang, Nuxt.js, GraphQL, MySQL, firestore, bigquery"
+
+    - logo: "https://cdn-icons-png.flaticon.com/512/1940/1940611.png"
+      title: "コンサル人材マッチングサービス"
+      company: "Lead Developer"
+      duration: "AWS, golang, Angular, GraphQL, dynamodb, opensearch"
+
+    - logo: "https://cdn-icons-png.flaticon.com/512/3135/3135686.png"
+      title: "転職・副業マッチングサービス"
+      company: "Project Manager"
+      duration: "GCP, golang, Nuxt.js, MySQL, CloudPub/Sub"

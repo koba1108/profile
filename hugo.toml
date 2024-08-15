@@ -1,0 +1,37 @@
+# Basic configuration
+baseURL = "https://example.com"
+languageCode = "ja-jp"
+title = "小林良昇 - システムエンジニア / CTO / テックリード"
+theme = "hugo-developer-portfolio"
+
+[params]
+description = "転職マッチング、NFTマーケットプレイス、ライブ配信プラットフォームなど、多様な大規模Webサービスの開発実績を持つシステムエンジニア。最新技術と豊富な経験を活かし、あなたのプロジェクトを成功に導きます。システムエンジニア | CTO | テックリード | Golang | Node.js | AWS | GCP | サーバレスアーキテクチャ | Webサービス開発 | フルスタック開発"
+author = "@ykoba"
+image = "images/hero.jpg"
+
+[params.footer]
+email = "paseli.koba@gmail.com"
+address = "東京都調布市"
+googlemaps = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d25933.386938171243!2d139.53443816343167!3d35.66041833866795!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6018f0396154470f%3A0x5147f9fa866c6c19!2z5p2x5Lqs6YO96Kq_5biD5biC!5e0!3m2!1sja!2sjp!4v1723709857800!5m2!1sja!2sjp"
+
+[menu]
+[[menu.main]]
+name = "Home"
+url = "/"
+weight = 1
+[[menu.main]]
+name = "About"
+url = "/about"
+weight = 2
+[[menu.main]]
+name = "Posts"
+url = "/posts"
+weight = 3
+
+[params.plugins]
+[[params.plugins.css]]
+URL = "https://cdn.jsdelivr.net/npm/uikit@3.2.6/dist/css/uikit.min.css"
+[[params.plugins.js]]
+URL = "https://cdn.jsdelivr.net/npm/uikit@3.2.6/dist/js/uikit.min.js"
+[[params.plugins.js]]
+URL = "https://cdn.jsdelivr.net/npm/uikit@3.2.6/dist/js/uikit-icons.min.js"
