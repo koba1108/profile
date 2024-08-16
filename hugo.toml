@@ -1,8 +1,11 @@
 # Basic configuration
-baseURL = "https://example.com"
+baseURL = "https://koba1108.github.io/profile/"
 languageCode = "ja-jp"
 title = "小林良昇 - システムエンジニア / CTO / テックリード"
 theme = "hugo-developer-portfolio"
+relativeURLs = true
+canonifyURLs = false
+publishDir = "dist"
 
 [params]
 description = "転職マッチング、NFTマーケットプレイス、ライブ配信プラットフォームなど、多様な大規模Webサービスの開発実績を持つシステムエンジニア。最新技術と豊富な経験を活かし、あなたのプロジェクトを成功に導きます。システムエンジニア | CTO | テックリード | Golang | Node.js | AWS | GCP | サーバレスアーキテクチャ | Webサービス開発 | フルスタック開発"
