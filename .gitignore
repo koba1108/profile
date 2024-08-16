@@ -1,7 +1,7 @@
 .idea
 
 # Generated files by hugo
-/public/
+/dist
 /resources/_gen/
 /assets/jsconfig.json
 hugo_stats.json
