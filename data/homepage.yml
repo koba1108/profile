@@ -6,7 +6,7 @@ about:
   content: "システムエンジニア / CTO / テックリード"
   button:
     btnText: ">> About More"
-    URL: "/about"
+    URL: "./about"
 
 social:
   github: "koba1108"
