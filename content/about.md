@@ -1,5 +1,5 @@
 ---
-title: "About Me - 小林 良昇"
+title: "About Me"
 date: 2024-08-15T00:00:00+09:00
 draft: false
 ---
