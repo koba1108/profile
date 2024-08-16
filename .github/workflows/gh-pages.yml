@@ -43,7 +43,7 @@ jobs:
           hugo-version: 'latest'
 
       - name: Setup Pages
-        uses: actions/configure-pages@v1
+        uses: actions/configure-pages@v5
 
       - name: Build
         run: hugo --minify
