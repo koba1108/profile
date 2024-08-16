@@ -3,8 +3,6 @@ baseURL = "https://koba1108.github.io/profile/"
 languageCode = "ja-jp"
 title = "小林良昇 - システムエンジニア / CTO / テックリード"
 theme = "hugo-developer-portfolio"
-relativeURLs = true
-canonifyURLs = false
 publishDir = "dist"
 
 [params]
