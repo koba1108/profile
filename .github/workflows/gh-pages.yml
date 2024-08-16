@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      HUGO_CACHEDIR: /tmp/hugo_cache
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
