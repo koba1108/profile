@@ -173,7 +173,7 @@ footer: '© 2024 小林 良昇'
 新規プロジェクトのご相談、お見積り、その他のお問い合わせはこちらまで：
 
 - 名前：小林 良昇（こばやし よしのぶ）
-- メール：email@example.com
-- ウェブサイト：www.yoshinobukobayashi.com
+- メール：paseli.koba@gmail.com
+- ウェブサイト：https://koba1108.github.io/profile/
 
 お客様のビジネス成功のために、最適なテクノロジーソリューションを提供いたします。
