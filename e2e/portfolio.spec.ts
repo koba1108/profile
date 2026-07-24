@@ -1,6 +1,10 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test, type Locator, type Page } from "@playwright/test"
 
+const expectedBaseURL = new URL(
+  process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4173/profile/",
+)
+
 function captureRuntimeErrors(page: Page) {
   const errors: string[] = []
   page.on("console", (message) => {
@@ -128,6 +132,38 @@ test("主要導線、テーマ、詳細表示を利用できる", async ({
       document.documentElement.clientWidth,
   )
   expect(overflow).toBe(0)
+  expect(runtimeErrors).toEqual([])
+})
+
+test("GitHubとContactは承認済みの安全な外部リンクだけを使う", async ({
+  page,
+}) => {
+  const runtimeErrors = captureRuntimeErrors(page)
+  await openPortfolio(page)
+
+  const githubLinks = page.locator(
+    'a[href="https://github.com/koba1108"][target="_blank"]',
+  )
+  await expect(githubLinks).toHaveCount(2)
+  for (const link of await githubLinks.all()) {
+    await expect(link).toHaveAttribute("rel", "noopener noreferrer")
+    await expect(link).toHaveAttribute("referrerpolicy", "no-referrer")
+  }
+  expect(runtimeErrors).toEqual([])
+})
+
+test("section hashを含むURLを再読み込みできる", async ({ page }) => {
+  const runtimeErrors = captureRuntimeErrors(page)
+  const initialResponse = await page.goto("./#work")
+  expect(initialResponse?.ok()).toBe(true)
+  await expect(page).toHaveURL(/\/profile\/#work$/)
+
+  const reloadResponse = await page.reload()
+  expect(reloadResponse?.ok()).toBe(true)
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Selected Work" }),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/\/profile\/#work$/)
   expect(runtimeErrors).toEqual([])
 })
 
@@ -332,13 +368,13 @@ test("実行時通信はsame-origin assetだけを取得する", async ({ page }
     const url = new URL(request.url())
     if (
       url.protocol.startsWith("http") &&
-      url.origin !== "http://127.0.0.1:4173"
+      url.origin !== expectedBaseURL.origin
     ) {
       externalRequests.push(request.url())
     } else if (
       url.protocol.startsWith("http") &&
-      url.origin === "http://127.0.0.1:4173" &&
-      !url.pathname.startsWith("/profile/")
+      url.origin === expectedBaseURL.origin &&
+      !url.pathname.startsWith(expectedBaseURL.pathname)
     ) {
       outsideBasePathRequests.push(request.url())
     }

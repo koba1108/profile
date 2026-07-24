@@ -13,6 +13,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test:e2e": "npm run build && playwright test",
+    "test:e2e:published": "PLAYWRIGHT_BASE_URL=https://koba1108.github.io/profile/ playwright test",
     "test:e2e:report": "playwright show-report",
     "test:lighthouse": "npm run build && node scripts/run-lighthouse.mjs",
     "verify:dist": "node scripts/verify-react-dist.mjs"

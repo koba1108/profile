@@ -3,65 +3,86 @@ name: GitHub Pages
 on:
   push:
     branches:
-      - main  # Set a branch to deploy
-
-  # Github Actionsを手動で起動できるようにする。
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "gh-pages"
-  cancel-in-progress: true
+  group: gh-pages
+  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    env:
-      HUGO_CACHEDIR: /tmp/hugo_cache
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          submodules: true
-          fetch-depth: 0
+          node-version: 24
+          cache: npm
 
-      - uses: actions/cache@v4
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: |
+          npm audit --audit-level=moderate
+          npm audit --omit=dev --audit-level=moderate
+
+      - name: Typecheck, test, build and audit public files
+        run: npm run check
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end and accessibility tests
+        run: npm run test:e2e
+
+      - name: Lighthouse thresholds
+        run: npm run test:lighthouse
+
+      - name: Verify exact deployment artifact
+        run: npm run verify:dist
+
+      - name: Upload browser test evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          path: ${{ env.HUGO_CACHEDIR }}
-          key: ${{ runner.os }}-hugomod-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-hugomod-
+          name: pages-quality-failure-evidence
+          path: |
+            playwright-report/
+            test-results/
+            tmp/lighthouse/
+          if-no-files-found: ignore
+          retention-days: 7
 
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v3
+      - name: Upload React site
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
-          hugo-version: 'latest'
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Build
-        run: hugo --minify
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'dist'
+          path: react-dist
 
   deploy:
-    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
     needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
-      id-token: write
       pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
