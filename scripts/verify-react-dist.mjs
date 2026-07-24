@@ -1,14 +1,12 @@
 import { lstat, readFile, readdir } from "node:fs/promises"
 import path from "node:path"
 
+import { collectLegacyPrivateValues } from "./legacy-private-baseline.mjs"
+import { assertNoPrivateText } from "./publication-policy.mjs"
+
 const root = path.resolve("react-dist")
 const publicRoot = path.resolve("react-public")
 const publicPath = "/profile/"
-const legacyPrivateSourcePaths = [
-  path.resolve("content/about.md"),
-  path.resolve("data/homepage.yml"),
-  path.resolve("hugo.toml"),
-]
 const expectedCanonical = "https://koba1108.github.io/profile/"
 const pageTitle = "小林 良昇 | ykoba"
 const pageDescription =
@@ -31,31 +29,6 @@ const expectedSocialMetadata = new Map([
   ["name:twitter:description", socialDescription],
   ["name:twitter:image", `${expectedCanonical}ogp.png`],
 ])
-const forbiddenFragments = [
-  "facebook.com",
-  "fonts.googleapis.com",
-  "google.com/maps",
-  "maps.google",
-  "mailto:",
-  "static/images/profile",
-  "slides/services",
-  "cdn-icons-png.flaticon.com",
-  "upload.wikimedia.org",
-]
-const privatePatterns = [
-  {
-    label: "email address",
-    pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
-  },
-  {
-    label: "phone number",
-    pattern: /(?:\+81[- (]*|0\d{1,4}[- (])\d{1,4}[- )]*\d{3,4}\b/,
-  },
-  {
-    label: "private profile label",
-    pattern: /(?:メールアドレス|電話番号|住所|所在地|年齢)\s*[:：]/,
-  },
-]
 const allowedFilePatterns = [
   /^index\.html$/,
   /^favicon\.svg$/,
@@ -89,39 +62,6 @@ async function listFiles(directory) {
     }),
   )
   return nested.flat()
-}
-
-async function collectLegacyPrivateValues() {
-  const values = new Set()
-  const sources = await Promise.all(
-    legacyPrivateSourcePaths.map((file) => readFile(file, "utf8")),
-  )
-
-  for (const source of sources) {
-    for (const match of source.matchAll(
-      /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
-    )) {
-      values.add(match[0])
-    }
-    for (const match of source.matchAll(
-      /https?:\/\/[^\s"'<>]*(?:facebook\.com|google\.com\/maps|maps\.google)[^\s"'<>]*/gi,
-    )) {
-      values.add(match[0])
-    }
-    for (const line of source.split(/\r?\n/)) {
-      const markdownValue = line.match(
-        /^\s*-\s*\*\*(?:年齢|住所)\*\*\s*[:：]\s*(.+?)\s*$/,
-      )?.[1]
-      const configValue = line.match(
-        /^\s*(?:address|email|googlemaps)\s*=\s*["'](.+?)["']\s*$/i,
-      )?.[1]
-      for (const value of [markdownValue, configValue]) {
-        if (value && value.length >= 4) values.add(value)
-      }
-    }
-  }
-
-  return [...values]
 }
 
 function assertOneMatch(files, pattern) {
@@ -216,21 +156,10 @@ const textFiles = files.filter((file) => !file.endsWith(".png"))
 for (const file of textFiles) {
   const relativeFile = path.relative(root, file)
   const source = await readFile(file, "utf8")
-  for (const fragment of forbiddenFragments) {
-    assert(
-      !source.includes(fragment),
-      `${relativeFile} に公開対象外の参照 ${fragment} があります`,
-    )
-  }
-  for (const { label, pattern } of privatePatterns) {
-    assert(
-      !pattern.test(source),
-      `${relativeFile} に公開対象外の${label}らしき値があります`,
-    )
-  }
+  assertNoPrivateText(source, relativeFile)
   assert(
     !legacyPrivateValues.some((value) => source.includes(value)),
-    `${relativeFile} に現行portfolioの非公開値が含まれています`,
+    `${relativeFile} にprivacy baselineと一致する非公開値があります`,
   )
   assert(
     !source.includes("sourceMappingURL="),
