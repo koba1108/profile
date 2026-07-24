@@ -6,7 +6,7 @@ import { defineConfig } from "vite"
 
 export default defineConfig({
   base: "/profile/",
-  publicDir: false,
+  publicDir: "react-public",
   build: {
     outDir: "react-dist",
   },
