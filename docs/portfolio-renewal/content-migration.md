@@ -90,6 +90,19 @@ Issue #8では各行の`current`を`migrated`、`replaced`、`deleted`のいず�
 
 現行トップページですでに主要経験として扱われている次の4件を、Selected Workの実装対象として選定する。掲載する案件の選定と、各フィールドの公開承認は分けて管理する。公開承認が終わるまでは本番表示せず、本人確認で差し替えられるよう型付きデータとして分離する。
 
+### 公開方針の確定（2026-07-24）
+
+[Issue #4の本人決定](https://github.com/koba1108/profile/issues/4#issuecomment-5071031559)により、現行ポートフォリオですでに公開されている事実だけをReact版へ移行する。
+
+- 4案件のTitle、Context、Role、Responsibilities、Stackだけを公開する
+- 現行サイトにないChallenge、Decisions、Outcome、数値、顧客名、社名、内部事情は追加しない
+- 非公開項目は値、候補、placeholder、hidden DOMを持たせず、クライアントbundleにも含めない
+- Title、Role、Stackは`data/homepage.yml:experience`、ContextとResponsibilitiesは`content/about.md:主要プロジェクト経験`を採用する
+- 原典差異を自動統合せず、技術名はIssue #2で決めた表記正規化だけを行う
+- 住所、年齢、メール、Facebook、地図URL、写真はこの決定の対象外であり、React版では引き続き非公開にする
+
+以下の案件別表はIssue #2時点の監査記録として残す。表中の`TODO`、`pending`、Stack候補は公開データではなく、上記本人決定によってChallenge、Decisions、Outcomeの確認依頼と候補統合は撤回された。
+
 ### 1. ライブ配信プラットフォーム
 
 出典: `data/homepage.yml:experience`, `content/about.md:主要プロジェクト経験`
@@ -349,44 +362,45 @@ Issue #4のデータには、フィールド単位で出典を追跡できる`so
 
 ## Issue #4へ引き継ぐコンテンツ契約
 
-管理用TODOを公開UIの文字列として扱わない。未確認の本文は`undefined`または空配列とし、UIでは非表示にする。
+管理用TODOや非公開候補をクライアント用データへ記録しない。公開用入力は、基準commitで確認できる既存公開値と本人決定だけを持ち、Reactへは表示allowlistへ射影したDTOだけを渡す。
 
 ```ts
-type VerificationStatus = "verified" | "provisional" | "withheld" | "pending"
-type PublicationStatus = "approved" | "blocked" | "pending"
-
-type WorkCandidate<T> = {
+type ExistingPublicField<T> = {
   value: T
-  sourceRefs: string[]
+  verificationStatus: "verified"
+  sourceRefs: readonly [
+    `https://github.com/koba1108/profile/blob/3b67135b.../${string}`,
+    ...string[],
+  ]
+  candidates?: never
 }
 
-type WorkField<T> = {
-  value?: T
-  candidates?: WorkCandidate<T>[]
-  verificationStatus: VerificationStatus
-  sourceRefs: string[]
-}
-
-type Work = {
+type ApprovedWorkCandidate = {
   id: string
-  title: WorkField<string>
-  role: WorkField<string>
-  summary: WorkField<string>
-  context: WorkField<string>
-  challenge: WorkField<string>
-  decisions: WorkField<string[]>
-  outcomes: WorkField<string[]>
-  technologies: WorkField<string[]>
-  publicationStatus: PublicationStatus
+  title: ExistingPublicField<string>
+  role: ExistingPublicField<string>
+  context: ExistingPublicField<string>
+  responsibilities: ExistingPublicField<readonly [string, ...string[]]>
+  technologies: ExistingPublicField<readonly [string, ...string[]]>
+  challenge?: never
+  decisions?: never
+  outcomes?: never
+  publication: {
+    status: "approved"
+    approval: {
+      kind: "issue-comment"
+      url: "https://github.com/koba1108/profile/issues/4#issuecomment-5071031559"
+    }
+  }
 }
 ```
 
-- 仮文言にはフィールド単位で`verificationStatus: "provisional"`を付ける
-- 未確認のChallenge、Decisions、Outcomeは`value`を省略し、`verificationStatus: "pending"`とする
-- 原典が異なるStackは、本人確認まで`candidates`へ値と`sourceRefs`の組で保持し、自動統合しない
-- 候補の確認後にだけ正式な`value`を設定し、フィールドの`sourceRefs`へ採用根拠を残す
-- `publicationStatus: "approved"`でない案件は本番表示しない
-- Issue #6で、未承認データが本番表示対象に含まれないことをテストする
+- 表示値は`verificationStatus: "verified"`に限定する
+- `sourceRefs`はReact基本UI追加前の基準commit `3b67135b0ff844530d4edb5308b30b9aadff4a19`へのimmutable permalinkに限定する
+- Challenge、Decisions、Outcomeはproperty自体を持たせず、型と実行時guardの両方で拒否する
+- `candidates`、`provisional`、空欄、TODO、TBD、pendingを公開境界で拒否する
+- selector後のDTOから検証状態、出典、承認URLを除き、UIは公開値だけを受け取る
+- Issue #6で、非公開情報が本番表示対象と生成物に含まれないことを再検証する
 - Issue #7の公開前に、表示対象の案件、Contact、Canvas素材がすべて承認済みであることを確認する
 
 ## 本人確認TODO
@@ -396,8 +410,8 @@ type Work = {
 | Heroの最終メッセージ | #4 | PR完了 | `provisional`文言 | いいえ |
 | 英字氏名と役割表記 | #4 | PR完了 | 日本語氏名と`ykoba`のみ | いいえ |
 | Canvas素材 | #5 | PR完了 | 自作YK SVG | いいえ |
-| Selected Work 4件の本番公開承認 | #4 | PR完了 | 未承認案件を非表示 | はい |
-| 各案件のChallenge、Decisions、Outcome | #4 | PR完了 | 未確認項目を非表示 | はい |
+| Selected Work 4件の既存公開値と出典 | #4 | PR完了 | 出典不一致の案件を非表示 | はい |
+| 各案件のChallenge、Decisions、Outcome | #4 | 決定済み | 値も項目も掲載しない | いいえ |
 | 現在関心のある領域 | #4 | PR完了 | Aboutから該当文を省略 | いいえ |
 | Contactの連絡手段 | #4 | PR完了 | GitHubのみ | いいえ |
 | Facebookリンク | #4 | PR完了 | 削除 | いいえ |
@@ -414,6 +428,6 @@ type Work = {
 | --- | --- |
 | Issue #3開始 | 現行ベースライン、`/profile/` base、Hugo維持方針が記録済み |
 | Issue #4開始 | 4案件候補、空欄を許容する型、表示可能な仮文言が記録済み |
-| Issue #4完了 | 少なくとも3案件の本番公開と表示用本文が承認済み。4件目だけは未承認の場合に非表示可 |
+| Issue #4完了 | 4案件が既存公開値だけで表示され、非公開情報がsource、DOM、production bundleに含まれず、再レビューと3幅確認を通過している |
 | Issue #7開始 | 表示対象の案件、Contact、Canvas素材に`blocked`または`pending`がない |
 | Issue #8完了 | 公開資産台帳の全項目が`migrated`、`replaced`、`deleted`のいずれかになっている |
