@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises"
+import { lstat, readFile, readdir } from "node:fs/promises"
 import path from "node:path"
 
 const root = path.resolve("react-dist")
@@ -189,6 +189,18 @@ function inspectPng(buffer, label) {
 const files = await listFiles(root)
 const relativeFiles = files.map((file) => path.relative(root, file))
 const legacyPrivateValues = await collectLegacyPrivateValues()
+const fileStats = await Promise.all(files.map((file) => lstat(file)))
+
+for (const [index, fileStat] of fileStats.entries()) {
+  assert(
+    fileStat.isFile() && !fileStat.isSymbolicLink() && fileStat.nlink === 1,
+    `React配布物に通常file以外またはhard linkがあります: ${relativeFiles[index]}`,
+  )
+}
+assert(
+  fileStats.reduce((total, fileStat) => total + fileStat.size, 0) <= 2_000_000,
+  "React配布物の合計容量が2MBを超えています",
+)
 
 for (const file of relativeFiles) {
   assert(
