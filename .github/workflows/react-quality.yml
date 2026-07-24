@@ -1,0 +1,57 @@
+name: React Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: |
+          npm audit --audit-level=moderate
+          npm audit --omit=dev --audit-level=moderate
+
+      - name: Typecheck, lint, unit test, build and public artifact audit
+        run: npm run check
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end and accessibility tests
+        run: npm run test:e2e
+
+      - name: Lighthouse thresholds
+        run: npm run test:lighthouse
+
+      - name: Upload browser test evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-quality-failure-evidence
+          path: |
+            playwright-report/
+            test-results/
+            tmp/lighthouse/
+          if-no-files-found: ignore
+          retention-days: 7

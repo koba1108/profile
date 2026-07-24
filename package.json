@@ -5,12 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run verify:dist",
     "typecheck": "tsc -b",
     "lint": "oxlint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:report": "playwright show-report",
+    "test:lighthouse": "npm run build && node scripts/run-lighthouse.mjs",
+    "verify:dist": "node scripts/verify-react-dist.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.21",
@@ -25,6 +30,8 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
@@ -35,6 +42,7 @@
     "@types/three": "^0.185.1",
     "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^29.1.1",
+    "lighthouse": "^13.4.1",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.1.18",
     "typescript": "~6.0.2",

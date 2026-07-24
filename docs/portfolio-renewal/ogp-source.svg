@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#090d18"/>
+      <stop offset="1" stop-color="#16213d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(870 150) rotate(130) scale(580)">
+      <stop stop-color="#5f7fe8" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#5f7fe8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#background)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <circle cx="1010" cy="120" r="210" fill="none" stroke="#8da5ff" stroke-opacity=".24" stroke-width="2"/>
+  <circle cx="1080" cy="570" r="300" fill="none" stroke="#8da5ff" stroke-opacity=".14" stroke-width="2"/>
+  <g fill="#8da5ff" transform="translate(820 145) scale(.55)">
+    <path d="M92 118h112l116 186 116-186h112L370 392v130H270V392L92 118Z"/>
+    <path d="M370 118h100L370 318V118Zm0 220L486 522H372L280 368l90-30Z"/>
+  </g>
+  <text x="80" y="110" fill="#9bb3ff" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="28" font-weight="700" letter-spacing="4">SYSTEM ENGINEER / CTO / TECH LEAD</text>
+  <text x="80" y="225" fill="#f5f7ff" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="64" font-weight="800">小林 良昇</text>
+  <text x="80" y="310" fill="#f5f7ff" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="64" font-weight="800">Portfolio</text>
+  <line x1="80" y1="390" x2="640" y2="390" stroke="#8da5ff" stroke-opacity=".55" stroke-width="2"/>
+  <text x="80" y="475" fill="#f5f7ff" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="42" font-weight="700">@ykoba</text>
+  <text x="80" y="530" fill="#aeb9d6" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="26">koba1108.github.io/profile/</text>
+</svg>
