@@ -3,6 +3,8 @@
 確認日: 2026-07-24
 対象Issue: [#2 現行サイトを調査し、掲載コンテンツを確定する](https://github.com/koba1108/profile/issues/2)
 
+> Issue #8完了後も移行判断の監査記録として保持する。表中のHugo pathは移行前sourceを示し、現在のcheckoutには存在しない。非公開対象の値そのものはこの文書へ転記しない。
+
 ## 分類ルール
 
 | 分類 | 意味 |
@@ -53,25 +55,25 @@
 
 ### 公開資産台帳
 
-`current`はIssue #2時点の状態、`target`はIssue #8完了時に許容する状態を表す。
+`Issue #2 state`は移行開始時、`Issue #8 result`は撤去結果、`target`は移行後に許容する状態を表す。
 
-| 公開資産 | current | target | owner issue |
-| --- | --- | --- | --- |
-| `static/android-chrome-192x192.png` | pending | replaced / deleted | #6, #8 |
-| `static/android-chrome-384x384.png` | pending | replaced / deleted | #6, #8 |
-| `static/apple-touch-icon.png` | pending | replaced / deleted | #6, #8 |
-| `static/favicon-16x16.png` | pending | replaced / deleted | #6, #8 |
-| `static/favicon-32x32.png` | pending | replaced / deleted | #6, #8 |
-| `static/favicon.ico` | pending | replaced / deleted | #6, #8 |
-| `static/mstile-150x150.png` | pending | replaced / deleted | #6, #8 |
-| `static/safari-pinned-tab.svg` | pending | replaced / deleted | #6, #8 |
-| `static/browserconfig.xml` | pending | replaced / deleted | #6, #8 |
-| `static/site.webmanifest` | pending | replaced / deleted | #6, #8 |
-| `static/images/profile.jpg` | pending | migrated / deleted | #5, #8 |
-| `static/slides/services.md` | pending | deleted | #8 |
-| `static/slides/services.html` | pending | deleted | #8 |
+| 公開資産 | Issue #2 state | Issue #8 result | target | owner issue |
+| --- | --- | --- | --- | --- |
+| `static/android-chrome-192x192.png` | pending | deleted | deleted | #6, #8 |
+| `static/android-chrome-384x384.png` | pending | deleted | deleted | #6, #8 |
+| `static/apple-touch-icon.png` | pending | deleted | deleted | #6, #8 |
+| `static/favicon-16x16.png` | pending | deleted | deleted | #6, #8 |
+| `static/favicon-32x32.png` | pending | deleted | deleted | #6, #8 |
+| `static/favicon.ico` | pending | deleted | deleted | #6, #8 |
+| `static/mstile-150x150.png` | pending | deleted | deleted | #6, #8 |
+| `static/safari-pinned-tab.svg` | pending | deleted | deleted | #6, #8 |
+| `static/browserconfig.xml` | pending | deleted | deleted | #6, #8 |
+| `static/site.webmanifest` | pending | deleted | deleted | #6, #8 |
+| `static/images/profile.jpg` | pending | deleted | deleted | #5, #8 |
+| `static/slides/services.md` | pending | deleted | deleted | #8 |
+| `static/slides/services.html` | pending | deleted | deleted | #8 |
 
-Issue #8では各行の`current`を`migrated`、`replaced`、`deleted`のいずれかへ更新し、`pending`が残っていないことを確認する。
+Issue #8で旧assetをすべて削除し、React版のfavicon、manifest、OGP、YK SVGへ置換した。公開asset台帳に`pending`は残さない。
 
 ## Hero
 

@@ -1,11 +1,5 @@
 .idea
 
-# Generated files by hugo
-/dist
-/resources/_gen/
-/assets/jsconfig.json
-hugo_stats.json
-
 # Generated files by React/Vite
 /node_modules
 /react-dist
@@ -18,14 +12,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
-# Executable may be added to repository
-hugo.exe
-hugo.darwin
-hugo.linux
-
-# Temporary lock file while building
-/.hugo_build.lock
 
 # OS generated files
 .DS_Store
