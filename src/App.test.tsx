@@ -6,6 +6,10 @@ import App from "@/App"
 import { ThemeProvider } from "@/components/theme-provider"
 import { THEME_STORAGE_KEY } from "@/lib/theme"
 
+vi.mock("@/components/canvasui/ParticleObject", () => ({
+  ParticleObject: () => null,
+}))
+
 function installMatchMedia(darkMode: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -77,7 +81,13 @@ describe("Portfolio", () => {
     expect(container).not.toHaveTextContent(/\d+歳/)
     expect(container).not.toHaveTextContent(/現住所/)
     expect(container).not.toHaveTextContent(/\bTODO\b/i)
-    expect(container.querySelector("img")).toBeNull()
+    const images = container.querySelectorAll("img")
+    expect(images).toHaveLength(1)
+    expect(images[0]).toHaveAttribute(
+      "src",
+      expect.stringContaining("yk-particle.svg"),
+    )
+    expect(images[0]).toHaveAttribute("alt", "")
   })
 
   it("skip linkとページ内anchorを提供する", () => {
