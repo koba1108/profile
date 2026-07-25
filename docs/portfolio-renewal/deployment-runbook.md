@@ -19,7 +19,7 @@
 ## 公開境界
 
 - Pages artifactはReact buildの`react-dist`だけとし、repository全体をuploadしない
-- React artifactは`scripts/verify-react-dist.mjs`の完全allowlistに一致した8 fileだけを許可する
+- React artifactは`scripts/verify-react-dist.mjs`の完全allowlistに一致した9 fileだけを許可する
 - 旧ポートフォリオで非公開扱いにした年齢、詳細住所、個人メール、Facebook、地図、人物写真、旧資料、未公開案件情報は公開しない
 - Hugo source、theme submodule、旧assetはReact版の公開確認後に撤去済みであり、再追加をrepository監査で拒否する
 - repository全体と配布物でPII形式、immutableなprivacy baseline、旧binary digest、禁止URL・path、metadata、asset構成を検査する
@@ -30,10 +30,10 @@
 1. GitHub Pages workflowの`build`と`deploy`が成功している
 2. deployment URLが`https://koba1108.github.io/profile/`である
 3. `/profile/`を再読み込みしてHTTP 200になる
-4. HTML、CSS、JavaScript、favicon、manifest、OGP、Particle Object、YK SVGがHTTP 200になる
+4. HTML、CSS、JavaScript、favicon、manifest、OGP、Particle Object、Project Lens、YK SVGがHTTP 200になる
 5. desktop 1440pxとmobile 375pxでHero、Selected Work、Capabilities、About、Contactを表示できる
-6. ページ内navigation、テーマ切替、Work詳細、mobile menu、GitHub / Contactリンクが機能する
-7. reduced motionまたはWebGL失敗時も静的YKと主要情報を表示できる
+6. ページ内navigation、テーマ切替、Project LensのON/OFF、Work詳細、mobile menu、GitHub / Contactリンクが機能する
+7. reduced motion、touch中心、Data Saver、WebGL失敗時も静的YKと通常のSelected Workを表示できる
 8. Console error、4xx / 5xx response、`/profile/`外のsame-origin request、意図しない外部requestがない
 9. title、description、canonical、OGP、Twitter Cardが承認済みの値である
 10. 撤去済みの旧asset URLがReact版から参照・配信されていない

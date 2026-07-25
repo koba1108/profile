@@ -135,6 +135,140 @@ test("主要導線、テーマ、詳細表示を利用できる", async ({
   expect(runtimeErrors).toEqual([])
 })
 
+test("Project Lensを明示操作時だけ読み込み通常のWork操作を維持する", async ({
+  page,
+}, testInfo) => {
+  const runtimeErrors = captureRuntimeErrors(page)
+  const magnifyRequests: string[] = []
+  const lensNetworkViolations: string[] = []
+  page.on("request", (request) => {
+    if (request.url().includes("Magnify-")) {
+      magnifyRequests.push(request.url())
+    }
+    const url = new URL(request.url())
+    if (
+      url.protocol.startsWith("http") &&
+      (url.origin !== expectedBaseURL.origin ||
+        !url.pathname.startsWith(expectedBaseURL.pathname))
+    ) {
+      lensNetworkViolations.push(request.url())
+    }
+  })
+
+  await openPortfolio(page)
+
+  const lensState = page.locator("[data-project-lens-status]")
+  const enableLens = page.getByRole("button", {
+    name: "Project LensをONにする",
+  })
+  await expect(lensState).toHaveAttribute(
+    "data-project-lens-status",
+    testInfo.project.name === "desktop" ? "off" : "fallback",
+  )
+  expect(magnifyRequests).toEqual([])
+
+  if (testInfo.project.name !== "desktop") {
+    await expect(enableLens).toBeDisabled()
+    await expect(lensState).toHaveAttribute(
+      "data-project-lens-fallback-reason",
+      "coarse-pointer",
+    )
+    await expect(
+      page.locator('[data-project-lens-canvas="output"]'),
+    ).toHaveCount(0)
+    expect(lensNetworkViolations).toEqual([])
+    expect(runtimeErrors).toEqual([])
+    return
+  }
+
+  await expect(enableLens).toBeEnabled()
+  await enableLens.click()
+  await expect(lensState).toHaveAttribute("data-project-lens-status", "on")
+  await expect(
+    page.locator('[data-project-lens-canvas="output"]'),
+  ).toHaveCount(1)
+  await expect(
+    page.locator('[data-project-lens-canvas="source"]'),
+  ).toHaveCount(1)
+  await expect.poll(() => magnifyRequests.length).toBe(1)
+
+  const outputCanvas = page.locator('[data-project-lens-canvas="output"]')
+  await outputCanvas.scrollIntoViewIfNeeded()
+  const outputBox = await outputCanvas.boundingBox()
+  expect(outputBox).not.toBeNull()
+  if (outputBox) {
+    await page.mouse.move(
+      outputBox.x + outputBox.width / 2,
+      outputBox.y + Math.min(outputBox.height / 2, 300),
+    )
+    const readout = page.locator("[data-project-lens-readout]")
+    await expect.poll(() => readout.evaluate((element) => element.style.transform))
+      .not.toBe("")
+    const transformBeforeScroll = await readout.evaluate(
+      (element) => element.style.transform,
+    )
+    const scrollBefore = await page.evaluate(() => window.scrollY)
+    await page.mouse.wheel(0, 100)
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(
+      scrollBefore,
+    )
+    await expect
+      .poll(() => readout.evaluate((element) => element.style.transform))
+      .not.toBe(transformBeforeScroll)
+  }
+
+  const detailsTrigger = page
+    .getByRole("button", {
+      name: "ライブ配信プラットフォームの詳細を見る",
+    })
+    .first()
+  await detailsTrigger.click()
+  await expect(
+    page.getByRole("dialog", { name: "ライブ配信プラットフォーム" }),
+  ).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(detailsTrigger).toBeFocused()
+
+  const disableLens = page.getByRole("button", {
+    name: "Project LensをOFFにする",
+  })
+  await disableLens.focus()
+  await page.keyboard.press("Enter")
+  await expect(lensState).toHaveAttribute("data-project-lens-status", "off")
+  await expect(page.locator("[data-project-lens-canvas]")).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Project LensをONにする" }),
+  ).toBeFocused()
+  expect(magnifyRequests).toHaveLength(1)
+
+  await page
+    .getByRole("button", { name: "Project LensをONにする" })
+    .click()
+  await expect(lensState).toHaveAttribute("data-project-lens-status", "on")
+  await page
+    .locator('[data-project-lens-canvas="output"]')
+    .dispatchEvent("webglcontextlost", { cancelable: true })
+  await expect(lensState).toHaveAttribute(
+    "data-project-lens-fallback-reason",
+    "webgl",
+  )
+  await expect(page.locator("[data-project-lens-canvas]")).toHaveCount(0)
+  await expect(
+    page.getByRole("heading", {
+      level: 3,
+      name: "ライブ配信プラットフォーム",
+    }),
+  ).toBeVisible()
+  const failedLensToggle = page.getByRole("button", {
+    name: "Project LensをONにする",
+  })
+  await expect(failedLensToggle).toBeFocused()
+  await expect(failedLensToggle).toHaveAttribute("aria-disabled", "true")
+  expect(magnifyRequests).toHaveLength(1)
+  expect(lensNetworkViolations).toEqual([])
+  expect(runtimeErrors).toEqual([])
+})
+
 test("GitHubとContactは承認済みの安全な外部リンクだけを使う", async ({
   page,
 }) => {
@@ -248,7 +382,7 @@ test("画面幅ごとのlayoutを維持する", async ({ page }, testInfo) => {
         getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/)
           .length,
     ),
-    page.locator("#work > div:last-child").evaluate(
+    page.locator("[data-work-grid]").evaluate(
       (element) =>
         getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/)
           .length,
@@ -299,9 +433,49 @@ test("画面幅ごとのlayoutを維持する", async ({ page }, testInfo) => {
   expect(runtimeErrors).toEqual([])
 })
 
+test("320px幅でもProject Lens操作が横にはみ出さない", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile")
+  const runtimeErrors = captureRuntimeErrors(page)
+  await page.setViewportSize({ width: 320, height: 812 })
+  await openPortfolio(page)
+
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  )
+  const toggleBox = await page
+    .getByRole("button", { name: "Project LensをONにする" })
+    .boundingBox()
+
+  expect(overflow).toBe(0)
+  expect(toggleBox).not.toBeNull()
+  if (toggleBox) {
+    expect(toggleBox.x).toBeGreaterThanOrEqual(0)
+    expect(toggleBox.x + toggleBox.width).toBeLessThanOrEqual(320)
+  }
+  expect(runtimeErrors).toEqual([])
+})
+
 test("重大なaxe違反がない", async ({ page }) => {
   const runtimeErrors = captureRuntimeErrors(page)
   await openPortfolio(page)
+
+  if (
+    await page
+      .getByRole("button", { name: "Project LensをONにする" })
+      .isEnabled()
+  ) {
+    await page
+      .getByRole("button", { name: "Project LensをONにする" })
+      .click()
+    await expect(page.locator("[data-project-lens-status]")).toHaveAttribute(
+      "data-project-lens-status",
+      "on",
+    )
+  }
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -391,15 +565,19 @@ test("実行時通信はsame-origin assetだけを取得する", async ({ page }
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" })
 
-  test("Particle chunkを取得せず静的YKを表示する", async ({
+  test("Canvas chunkを取得せず静的YKと通常Workを表示する", async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile")
     const runtimeErrors = captureRuntimeErrors(page)
     const particleRequests: string[] = []
+    const magnifyRequests: string[] = []
     page.on("request", (request) => {
       if (request.url().includes("ParticleObject")) {
         particleRequests.push(request.url())
+      }
+      if (request.url().includes("Magnify-")) {
+        magnifyRequests.push(request.url())
       }
     })
 
@@ -413,9 +591,61 @@ test.describe("reduced motion", () => {
     )
     await expect(visual.locator("img")).toBeVisible()
     await expect(visual.locator("canvas")).toHaveCount(0)
+    const lensState = page.locator("[data-project-lens-status]")
+    await expect(lensState).toHaveAttribute(
+      "data-project-lens-fallback-reason",
+      "reduced-motion",
+    )
+    await expect(
+      page.getByRole("button", { name: "Project LensをONにする" }),
+    ).toBeDisabled()
     expect(particleRequests).toEqual([])
+    expect(magnifyRequests).toEqual([])
     expect(runtimeErrors).toEqual([])
   })
+})
+
+test("Data SaverではCanvas chunkを取得せず通常表示を維持する", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop")
+  const runtimeErrors = captureRuntimeErrors(page)
+  const canvasRequests: string[] = []
+  page.on("request", (request) => {
+    if (
+      request.url().includes("ParticleObject") ||
+      request.url().includes("Magnify-")
+    ) {
+      canvasRequests.push(request.url())
+    }
+  })
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "connection", {
+      configurable: true,
+      value: {
+        addEventListener() {},
+        removeEventListener() {},
+        saveData: true,
+      },
+    })
+  })
+
+  await openPortfolio(page)
+
+  await expect(page.locator("[data-canvas-status]")).toHaveAttribute(
+    "data-canvas-fallback-reason",
+    "save-data",
+  )
+  const lensState = page.locator("[data-project-lens-status]")
+  await expect(lensState).toHaveAttribute(
+    "data-project-lens-fallback-reason",
+    "save-data",
+  )
+  await expect(
+    page.getByRole("button", { name: "Project LensをONにする" }),
+  ).toBeDisabled()
+  expect(canvasRequests).toEqual([])
+  expect(runtimeErrors).toEqual([])
 })
 
 test("WebGL失敗時もConsole errorなしで静的YKへ切り替わる", async ({
@@ -423,6 +653,12 @@ test("WebGL失敗時もConsole errorなしで静的YKへ切り替わる", async 
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop")
   const runtimeErrors = captureRuntimeErrors(page)
+  const magnifyRequests: string[] = []
+  page.on("request", (request) => {
+    if (request.url().includes("Magnify-")) {
+      magnifyRequests.push(request.url())
+    }
+  })
   await page.addInitScript(() => {
     const originalGetContext = HTMLCanvasElement.prototype.getContext
     HTMLCanvasElement.prototype.getContext = function (
@@ -445,5 +681,22 @@ test("WebGL失敗時もConsole errorなしで静的YKへ切り替わる", async 
   )
   await expect(visual.locator("img")).toBeVisible()
   await expect(visual.locator("canvas")).toHaveCount(0)
+
+  await page
+    .getByRole("button", { name: "Project LensをONにする" })
+    .click()
+  const lensState = page.locator("[data-project-lens-status]")
+  await expect(lensState).toHaveAttribute(
+    "data-project-lens-fallback-reason",
+    "webgl",
+  )
+  await expect(page.locator("[data-project-lens-canvas]")).toHaveCount(0)
+  await expect(
+    page.getByRole("heading", {
+      level: 3,
+      name: "ライブ配信プラットフォーム",
+    }),
+  ).toBeVisible()
+  expect(magnifyRequests).toHaveLength(1)
   expect(runtimeErrors).toEqual([])
 })
