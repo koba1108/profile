@@ -1,7 +1,7 @@
 # React版 品質ゲート
 
 最終更新日: 2026-07-25
-対象Issue: [#6 テスト・アクセシビリティ・SEO・性能を整備する](https://github.com/koba1108/profile/issues/6)、[#8 Hugoを撤去し、READMEと保守手順を更新する](https://github.com/koba1108/profile/issues/8)
+対象Issue: [#6 テスト・アクセシビリティ・SEO・性能を整備する](https://github.com/koba1108/profile/issues/6)、[#8 Hugoを撤去し、READMEと保守手順を更新する](https://github.com/koba1108/profile/issues/8)、[#17 Project Lens](https://github.com/koba1108/profile/issues/17)
 
 ## 公開境界
 
@@ -42,16 +42,16 @@ Playwrightは本番previewの`/profile/`を次の3幅で検証する。
 
 モバイル条件で3回実行し、カテゴリごとの中央値を判定する。
 
-| category | target | 2026-07-24 median |
+| category | target | 2026-07-25 median |
 | --- | ---: | ---: |
 | Performance | 85 | 95 |
 | Accessibility | 95 | 100 |
 | Best Practices | 95 | 100 |
 | SEO | 95 | 100 |
 
-個別Performanceは82 / 95 / 95。初回のcold-startも含め、事前定義した3回中央値で合否を判定した。
+Project Lens追加後の個別Performanceは95 / 95 / 95。事前定義した3回中央値で合否を判定した。
 
-Three.jsを含むParticle Objectはlazy chunkへ分離されている。reduced motionまたはData Saver時はParticle chunk自体を要求しない。
+Three.jsを含むParticle Objectはlazy chunkへ分離されている。Project LensのMagnifyも独立したexact 1 chunkとし、初期HTMLからpreloadしない。LensがOFF、reduced motion、Data Saver、touch中心のときはMagnify chunk自体を要求しない。ON時もSelected Work全体でWebGL instanceは1個だけとし、通常HTML、Work詳細、keyboard、focusを維持する。
 
 CIはdependency auditも実行し、browser testが失敗した場合に限り、公開画面だけを対象にしたPlaywright / Lighthouseの診断artifactを7日間保存する。
 

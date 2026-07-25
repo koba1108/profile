@@ -125,12 +125,12 @@ async function stopPreview(preview) {
 const chromePath =
   process.env.CHROME_PATH ??
   (await firstExisting([
-    chromium.executablePath(),
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
     "/usr/bin/google-chrome",
     "/usr/bin/google-chrome-stable",
     "/usr/bin/chromium",
+    chromium.executablePath(),
   ])) ??
   findOnPath(["google-chrome", "google-chrome-stable", "chromium"])
 

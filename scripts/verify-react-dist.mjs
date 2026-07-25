@@ -36,6 +36,7 @@ const allowedFilePatterns = [
   /^site\.webmanifest$/,
   /^assets\/index-[A-Za-z0-9_-]+\.js$/,
   /^assets\/index-[A-Za-z0-9_-]+\.css$/,
+  /^assets\/Magnify-[A-Za-z0-9_-]+\.js$/,
   /^assets\/ParticleObject-[A-Za-z0-9_-]+\.js$/,
   /^assets\/yk-particle-[A-Za-z0-9_-]+\.svg$/,
 ]
@@ -243,18 +244,66 @@ const particleChunk = assertOneMatch(
   relativeFiles,
   /^assets\/ParticleObject-[A-Za-z0-9_-]+\.js$/,
 )
-const [mainSource, particleSource] = await Promise.all([
-  readFile(path.join(root, mainChunk), "utf8"),
-  readFile(path.join(root, particleChunk), "utf8"),
-])
+const magnifyChunk = assertOneMatch(
+  relativeFiles,
+  /^assets\/Magnify-[A-Za-z0-9_-]+\.js$/,
+)
+const [mainSource, magnifySource, particleSource, magnifyStat] =
+  await Promise.all([
+    readFile(path.join(root, mainChunk), "utf8"),
+    readFile(path.join(root, magnifyChunk), "utf8"),
+    readFile(path.join(root, particleChunk), "utf8"),
+    lstat(path.join(root, magnifyChunk)),
+  ])
 assert(
   mainSource.includes(path.basename(particleChunk)),
   "main chunkからParticle Objectをdynamic importできません",
 )
 assert(
+  mainSource.includes(path.basename(magnifyChunk)),
+  "main chunkからMagnifyをdynamic importできません",
+)
+assert(
   !index.includes(path.basename(particleChunk)),
   "index.htmlからParticle Objectを直接読み込んでいます",
 )
+assert(
+  !index.includes(path.basename(magnifyChunk)),
+  "index.htmlからMagnifyを直接読み込んでいます",
+)
+assert(
+  magnifyStat.size <= 30_000,
+  "Magnify lazy chunkが30KBを超えています",
+)
+for (const marker of [
+  "Magnify shader could not compile",
+  "drawElementImage",
+  "uRippleBendWidth",
+]) {
+  assert(
+    !mainSource.includes(marker),
+    `Magnify marker ${marker} がmain chunkへ混入しています`,
+  )
+  assert(
+    magnifySource.includes(marker),
+    `Magnify marker ${marker} がMagnify chunkにありません`,
+  )
+}
+for (const [chunk, source] of [
+  [magnifyChunk, magnifySource],
+  [particleChunk, particleSource],
+]) {
+  for (const notice of [
+    "Copyright (c) 2026 David Haz",
+    "Permission is hereby granted",
+    "Commons Clause Restriction",
+  ]) {
+    assert(
+      source.includes(notice),
+      `${chunk} にCanvas UI legal noticeがありません: ${notice}`,
+    )
+  }
+}
 for (const marker of ["WebGLRenderer", "BufferGeometry"]) {
   assert(
     !mainSource.includes(marker),

@@ -24,6 +24,14 @@ export const pageCopy = {
     cardTechnologiesLabel: "主な使用技術",
     detailsCta: "詳細を見る",
     detailsCtaSuffix: "の詳細を見る",
+    lens: {
+      disable: "Project LensをOFFにする",
+      enable: "Project LensをONにする",
+      hint: "カーソルで作品をスキャン",
+      label: "Project Lens",
+      loading: "Lensを準備中",
+      unavailable: "この環境では標準表示を使用します",
+    },
     details: {
       context: "Context",
       role: "Role",

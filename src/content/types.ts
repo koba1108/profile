@@ -172,6 +172,14 @@ export interface WorkSectionCopy extends SectionCopy {
   cardTechnologiesLabel: string
   detailsCta: string
   detailsCtaSuffix: string
+  lens: {
+    disable: string
+    enable: string
+    hint: string
+    label: string
+    loading: string
+    unavailable: string
+  }
   details: {
     context: string
     role: string

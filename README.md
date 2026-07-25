@@ -76,9 +76,11 @@ Selected Workは、既存公開情報のimmutable sourceと本人承認が揃っ
 - アプリ内SVG: `src/assets/`
 - OGPの編集元: `docs/portfolio-renewal/ogp-source.svg`
 
-`react-public/ogp.png`は1200x630、500KB以下、承認済みPNG chunkだけを許可します。`react-dist`はHTML、CSS、JavaScript、favicon、manifest、OGP、Particle Object、YK SVGの8 fileだけを許可し、source mapや未承認fileを配信しません。
+`react-public/ogp.png`は1200x630、500KB以下、承認済みPNG chunkだけを許可します。`react-dist`はHTML、CSS、JavaScript、favicon、manifest、OGP、Particle Object、Project Lens、YK SVGの9 fileだけを許可し、source mapや未承認fileを配信しません。
 
 アセットを追加・変更する場合は、`scripts/verify-react-dist.mjs`のallowlistとprivacy境界を意図的にレビューし、`npm run check`と`npm run test:e2e`を通してください。
+
+Selected WorkのProject Lensは初期OFFです。fine pointer環境で明示的にONにした場合だけCanvas UI Magnifyをlazy loadし、通常HTMLと詳細操作は常に残します。reduced motion、Data Saver、touch中心、module / WebGL失敗時は追加chunkを取得しないか、通常表示へ戻します。設計と安全境界は[Project Lens実装メモ](docs/portfolio-renewal/project-lens.md)を参照してください。
 
 ## 非公開情報
 
