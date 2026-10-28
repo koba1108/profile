@@ -1,0 +1,158 @@
+name: Vite security update (temporary)
+
+on:
+  push:
+    branches: [fix/vite-8.1.6-security]
+    paths: [.github/workflows/vite-security-update-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vite-security-update-once
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/fix/vite-8.1.6-security'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      commit: ${{ steps.commit.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: Record baseline dependency audit
+        run: |
+          cp package.json "$RUNNER_TEMP/package-before.json"
+          cp package-lock.json "$RUNNER_TEMP/lock-before.json"
+          npm audit --package-lock-only --json > "$RUNNER_TEMP/audit-before.json" || test "$?" -eq 1
+      - name: Update only the requested direct dependency using npm
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-dev --save-prefix='^' vite@8.1.6
+          git diff --check
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const before = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/package-before.json`, 'utf8'));
+          const after = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          assert.equal(after.devDependencies.vite, '^8.1.6');
+          before.devDependencies.vite = after.devDependencies.vite;
+          assert.deepEqual(after, before, 'Unexpected direct dependency or script changes');
+          const oldLock = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/lock-before.json`, 'utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          assert.equal(lock.packages['node_modules/vite'].version, '8.1.6');
+          for (const name of new Set([...Object.keys(oldLock.packages), ...Object.keys(lock.packages)])) {
+            const oldVersion = oldLock.packages[name]?.version;
+            const newVersion = lock.packages[name]?.version;
+            if (oldVersion !== newVersion) console.log(`${name}: ${oldVersion ?? '(absent)'} -> ${newVersion ?? '(absent)'}`);
+          }
+          const audit = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/audit-before.json`, 'utf8'));
+          assert.ok(audit.metadata, 'Baseline audit did not return valid results');
+          console.log('Baseline audit counts:', JSON.stringify(audit.metadata.vulnerabilities));
+          console.log('Baseline Vite advisory IDs:', JSON.stringify((audit.vulnerabilities?.vite?.via ?? []).filter(v => typeof v === 'object').map(v => v.url)));
+          NODE
+      - name: Commit package files to this branch only
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const branch = 'fix/vite-8.1.6-security';
+          assert.equal(process.env.GITHUB_REF, `refs/heads/${branch}`);
+          const base = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}`;
+          async function api(path, method = 'GET', body) {
+            const response = await fetch(`${base}${path}`, {
+              method,
+              headers: {Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28'},
+              body: body === undefined ? undefined : JSON.stringify(body),
+            });
+            if (!response.ok) throw new Error(`GitHub API ${method} ${path}: ${response.status}`);
+            return response.json();
+          }
+          const expected = process.env.GITHUB_SHA;
+          const ref = await api(`/git/ref/heads/${branch}`);
+          assert.equal(ref.object.sha, expected, 'Branch moved; refusing to overwrite concurrent changes');
+          const parent = await api(`/git/commits/${expected}`);
+          const tree = [];
+          for (const path of ['package.json', 'package-lock.json']) {
+            const blob = await api('/git/blobs', 'POST', {content: fs.readFileSync(path, 'utf8'), encoding: 'utf-8'});
+            tree.push({path, mode: '100644', type: 'blob', sha: blob.sha});
+          }
+          const newTree = await api('/git/trees', 'POST', {base_tree: parent.tree.sha, tree});
+          const commit = await api('/git/commits', 'POST', {message: 'fix(deps): update Vite to 8.1.6 for security advisories', tree: newTree.sha, parents: [expected]});
+          await api(`/git/refs/heads/${branch}`, 'PATCH', {sha: commit.sha, force: false});
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `commit=${commit.sha}\n`);
+          console.log(`Dependency update commit: ${commit.sha}`);
+          NODE
+  verify:
+    needs: update
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.update.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Clean install from the updated lockfile
+        run: npm ci
+      - name: Check resolved Vite versions and audit results
+        run: |
+          npm ls vite
+          npm audit --json > "$RUNNER_TEMP/audit-after.json" || test "$?" -eq 1
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const audit = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/audit-after.json`, 'utf8'));
+          assert.ok(audit.metadata, 'Audit did not return valid results');
+          console.log('Remaining audit counts:', JSON.stringify(audit.metadata.vulnerabilities));
+          for (const [name, data] of Object.entries(audit.vulnerabilities ?? {})) console.log(`Remaining: ${name} (${data.severity})`);
+          assert.ok(!audit.vulnerabilities?.vite, 'Vite still appears in npm audit');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          for (const [name, data] of Object.entries(lock.packages)) {
+            if (name === 'node_modules/vite' || name.endsWith('/node_modules/vite')) assert.equal(data.version, '8.1.6', `Unexpected Vite version at ${name}`);
+          }
+          console.log('Vite 8.1.6 verified; no Vite advisories remain in npm audit.');
+          NODE
+      - name: Typecheck, lint, unit tests, production build and privacy checks
+        id: checks
+        continue-on-error: true
+        run: npm run check
+      - name: Install Chromium
+        id: chromium
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end and accessibility tests
+        id: e2e
+        continue-on-error: true
+        run: npm run test:e2e
+      - name: Lighthouse thresholds
+        id: lighthouse
+        continue-on-error: true
+        run: npm run test:lighthouse
+      - name: Verify test outcomes and immutable package files
+        if: always()
+        env:
+          CHECKS: ${{ steps.checks.outcome }}
+          E2E: ${{ steps.e2e.outcome }}
+          LIGHTHOUSE: ${{ steps.lighthouse.outcome }}
+        run: |
+          printf 'check=%s e2e=%s lighthouse=%s\n' "$CHECKS" "$E2E" "$LIGHTHOUSE"
+          git diff --exit-code -- package.json package-lock.json
+          test "$CHECKS" = success
+          test "$E2E" = success
+          test "$LIGHTHOUSE" = success
