@@ -1,0 +1,139 @@
+name: Dependency security repair (temporary)
+
+on:
+  push:
+    branches: [fix/vite-8.1.6-security]
+    paths: [.github/workflows/dependency-security-update-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profile-dependency-security-repair
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.repository == 'koba1108/profile' && github.ref == 'refs/heads/fix/vite-8.1.6-security'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Record current dependencies and audit
+        run: |
+          cp package.json "$RUNNER_TEMP/package-before.json"
+          cp package-lock.json "$RUNNER_TEMP/lock-before.json"
+          npm audit --package-lock-only --include=dev --json > "$RUNNER_TEMP/audit-before.json" || test "$?" -eq 1
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const audit = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/audit-before.json`, 'utf8'));
+          assert.ok(audit.metadata, 'Invalid baseline audit');
+          console.log('Baseline:', JSON.stringify(audit.metadata.vulnerabilities));
+          for (const [name, entry] of Object.entries(audit.vulnerabilities ?? {})) {
+            console.log(`${name}: ${entry.severity}; fixAvailable=${JSON.stringify(entry.fixAvailable)}`);
+          }
+          NODE
+      - name: Apply compatible security fixes without force or install scripts
+        run: |
+          npm audit fix --package-lock-only --include=dev --ignore-scripts --no-fund
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const before = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/package-before.json`, 'utf8'));
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          assert.deepEqual(pkg, before, 'Unexpected manifest changes from compatible audit fix');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          const vitest = lock.packages['node_modules/vitest'].version;
+          assert.match(vitest, /^4\.\d+\.\d+$/, 'Refusing an unreviewed Vitest major or prerelease');
+          pkg.devDependencies.vitest = `^${vitest}`;
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          git diff --check
+      - name: Require zero advisories and inspect dependency changes
+        run: |
+          npm audit --package-lock-only --include=dev --json > "$RUNNER_TEMP/audit-after.json"
+          npm audit --package-lock-only --omit=dev --json > "$RUNNER_TEMP/audit-production.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const load = path => JSON.parse(fs.readFileSync(path, 'utf8'));
+          const before = load(`${process.env.RUNNER_TEMP}/package-before.json`);
+          const after = load('package.json');
+          before.devDependencies.vitest = after.devDependencies.vitest;
+          assert.deepEqual(after, before, 'Only the Vitest minimum may change in this follow-up');
+          const oldLock = load(`${process.env.RUNNER_TEMP}/lock-before.json`);
+          const lock = load('package-lock.json');
+          assert.equal(lock.packages[''].devDependencies.vitest, after.devDependencies.vitest);
+          assert.equal(lock.packages['node_modules/vite'].version, '8.1.6');
+          for (const section of ['dependencies', 'devDependencies']) {
+            for (const name of Object.keys(after[section] ?? {})) {
+              const oldVersion = oldLock.packages[`node_modules/${name}`]?.version;
+              const newVersion = lock.packages[`node_modules/${name}`]?.version;
+              assert.ok(oldVersion && newVersion, `Missing direct dependency ${name}`);
+              assert.equal(newVersion.split('.')[0], oldVersion.split('.')[0], `Unreviewed major update: ${name}`);
+            }
+          }
+          const changes = [];
+          for (const name of new Set([...Object.keys(oldLock.packages), ...Object.keys(lock.packages)])) {
+            const a = oldLock.packages[name]?.version;
+            const b = lock.packages[name]?.version;
+            if (a !== b) changes.push(`${name}: ${a ?? '(absent)'} -> ${b ?? '(absent)'}`);
+          }
+          console.log(changes.join('\n'));
+          const full = load(`${process.env.RUNNER_TEMP}/audit-after.json`);
+          const production = load(`${process.env.RUNNER_TEMP}/audit-production.json`);
+          assert.equal(full.metadata?.vulnerabilities?.total, 0, 'Full dependency audit must be clean');
+          assert.equal(production.metadata?.vulnerabilities?.total, 0, 'Production dependency audit must be clean');
+          console.log('Full audit:', JSON.stringify(full.metadata.vulnerabilities));
+          console.log('Production audit:', JSON.stringify(production.metadata.vulnerabilities));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Security repair\n\nFull audit: 0 vulnerabilities. Production audit: 0 vulnerabilities.\n\n' + changes.map(x => `- ${x}`).join('\n') + '\n');
+          NODE
+      - name: Commit package files to the existing PR branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const branch = 'fix/vite-8.1.6-security';
+          assert.equal(process.env.GITHUB_REPOSITORY, 'koba1108/profile');
+          assert.equal(process.env.GITHUB_REF, `refs/heads/${branch}`);
+          const base = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}`;
+          async function api(path, method = 'GET', body) {
+            const response = await fetch(`${base}${path}`, {
+              method,
+              headers: {Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28'},
+              body: body === undefined ? undefined : JSON.stringify(body),
+            });
+            if (!response.ok) throw new Error(`GitHub API ${method} ${path}: ${response.status}`);
+            return response.json();
+          }
+          const expected = process.env.GITHUB_SHA;
+          const pr = await api('/pulls/19');
+          assert.equal(pr.state, 'open');
+          assert.equal(pr.head.ref, branch);
+          assert.equal(pr.head.repo.full_name, 'koba1108/profile');
+          const ref = await api(`/git/ref/heads/${branch}`);
+          assert.equal(ref.object.sha, expected, 'Branch moved; refusing to overwrite concurrent changes');
+          const parent = await api(`/git/commits/${expected}`);
+          const tree = [];
+          for (const path of ['package.json', 'package-lock.json']) {
+            const blob = await api('/git/blobs', 'POST', {content: fs.readFileSync(path, 'utf8'), encoding: 'utf-8'});
+            tree.push({path, mode: '100644', type: 'blob', sha: blob.sha});
+          }
+          const newTree = await api('/git/trees', 'POST', {base_tree: parent.tree.sha, tree});
+          const commit = await api('/git/commits', 'POST', {message: 'fix(deps): resolve remaining dependency security advisories', tree: newTree.sha, parents: [expected]});
+          await api(`/git/refs/heads/${branch}`, 'PATCH', {sha: commit.sha, force: false});
+          console.log(`Security repair commit: ${commit.sha}`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\nCommit: ${commit.sha}\nNormal PR CI must pass before merging.\n`);
+          NODE
